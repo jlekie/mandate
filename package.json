@@ -1,0 +1,35 @@
+{
+    "name": "@jlekie/mandate",
+    "description": "Command line helper",
+    "version": "0.2.0",
+    "license": "MIT",
+    "repository": "jlekie/mandate",
+    "main": "index.js",
+    "engines": {
+        "node": ">=6.x"
+    },
+    "dependencies": {
+        "bluebird": "^3.5.0",
+        "chalk": "^2.0.1",
+        "debug": "^2.6.8",
+        "fs-extra": "^4.0.0",
+        "glob": "^7.1.2",
+        "js-yaml": "^3.9.0",
+        "lodash": "^4.17.4",
+        "reflect-metadata": "^0.1.10",
+        "source-map-support": "^0.4.15"
+    },
+    "devDependencies": {
+        "@types/bluebird": "^3.5.8",
+        "@types/chalk": "^0.4.31",
+        "@types/debug": "^0.0.29",
+        "@types/fs-extra": "^4.0.0",
+        "@types/glob": "^5.0.30",
+        "@types/js-yaml": "^3.9.0",
+        "@types/lodash": "^4.14.71",
+        "@types/node": "^8.0.16",
+        "ts-node": "^3.3.0",
+        "tslint": "^5.5.0",
+        "typescript": "^2.4.2"
+    }
+}
