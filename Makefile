@@ -5,6 +5,7 @@ default: build
 
 setup: check-env yarn-install
 build: node-build
+publish: npm-publish
 
 check-env:
 ifndef NPM
@@ -18,6 +19,8 @@ yarn-install:
 	yarn install
 gulp-build:
 	gulp build
+npm-publish:
+	npm publish dist --access=public
 
 node-build:
 ifndef COMSPEC
