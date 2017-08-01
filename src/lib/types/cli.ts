@@ -7,8 +7,8 @@ export type ConstructorOptionalProps<T, K extends keyof T> = Partial<Pick<T, K>>
 export type ConstructorRequiredProps<T, K extends keyof T> = Pick<T, K>;
 export type ConstructorProps<T, RK extends keyof T, OK extends keyof T> = ConstructorRequiredProps<T, RK> & ConstructorOptionalProps<T, OK>;
 
-export type CommandHandler<TOptions extends object, TParams extends object> = (options: TOptions, params: TParams, parentHandler: () => Promise<void> | void) => void;
-export type DefaultCommandHandler<TOptions extends object, TParams extends object> = (options: TOptions, params: TParams) => void;
+export type CommandHandler<TOptions extends object, TParams extends object> = (options: TOptions, params: TParams, parentHandler: () => Promise<void> | void) => Promise<void> | void;
+export type DefaultCommandHandler<TOptions extends object, TParams extends object> = (options: TOptions, params: TParams) => Promise<void> | void;
 
 export interface ICommandHandlers {
     default: DefaultCommandHandler<any, any>;
@@ -214,11 +214,11 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
     }
 
     public async handle(options: any, params: any): Promise<void> {
-        return this.handler(options, params, () => {
+        return this.handler(options, params, async () => {
             if (this.parentCommand)
-                this.parentCommand.handle(options, params);
+                await this.parentCommand.handle(options, params);
             else if (this.app)
-                this.app.handler(options, params);
+                await this.app.handler(options, params);
         });
     }
 
