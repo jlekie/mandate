@@ -68,7 +68,7 @@ async function relativity() {
 
 async function buildTypescript(options: TS.CompilerOptions) {
     debug('Acquiring source files');
-    const sourceFiles = await globAsync('.obj/**/*.ts');
+    const sourceFiles = [ ...(await globAsync('.obj/**/*.ts')), ...(await globAsync('defs/**/*.d.ts')) ];
 
     const program = TS.createProgram(sourceFiles, options);
 
@@ -96,6 +96,20 @@ async function copyManifests() {
     await FS.outputFile('dist/timestamp', new Date().getTime().toString());
 }
 
+async function copyData() {
+    const files = await globAsync('src/data/**/*');
+
+    await Bluebird.map(files, async (file) => {
+        const stats = await FS.statSync(file);
+        if (!stats.isFile()) return;
+
+        const targetPath = file.replace('src/', 'dist/');
+
+        debug(`Copying ${file} to ${targetPath}`);
+        await FS.copy(file, targetPath);
+    });
+}
+
 async function cleanup() {
     await FS.remove(Path.resolve('.obj'));
 }
@@ -117,6 +131,9 @@ console.log(`--- ${Chalk.dim('BUILD STARTING')} ---`);
 
     console.log(Chalk.blue('Copying manifests...'));
     await copyManifests();
+
+    console.log(Chalk.blue('Copying data...'));
+    await copyData();
 })().then(() => {
     console.log(`--- ${Chalk.green('BUILD FINISHED')} ---`);
 }).catch((err) => {

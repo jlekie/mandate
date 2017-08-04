@@ -1,0 +1,22 @@
+import * as Mandate from '@jlekie/mandate';
+
+export interface IDefaultOptions {
+    {{#each options}}
+    {{camelcase @key}}: {{type}};
+    {{/each}}
+}
+
+{{#each commands}}
+export interface I{{pascalcase @key}}Options {
+    {{#each options}}
+    {{@key}}: {{type}};
+    {{/each}}
+}
+{{/each}}
+
+export type Handlers = {
+    default: Mandate.DefaultCommandHandler<IDefaultOptions, any>;
+    {{#each commands}}
+    {{camelcase @key}}: Mandate.CommandHandler<I{{pascalcase @key}}Options, any>;
+    {{/each}}
+};
