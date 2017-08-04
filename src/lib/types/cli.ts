@@ -50,6 +50,9 @@ export interface IApp {
 
     handle(args: Array<string>): Promise<void>;
 
+    registerOption(name: string, flags: ReadonlyArray<string>, description: string): IOption;
+    registerCommand<TOptions extends object, TParams extends object>(name: string, handler?: CommandHandler<TOptions, TParams>): ICommand<any>;
+
     outputHelp(): void;
 }
 export class App implements IApp {
@@ -145,6 +148,19 @@ export class App implements IApp {
         }
     }
 
+    public registerOption(name: string, flags: ReadonlyArray<string>, description: string): IOption {
+        const option = new Option(name, flags, { description });
+        unwrapArray(this.options).push(option);
+
+        return option;
+    }
+    public registerCommand<TOptions extends object, TParams extends object>(name: string, handler?: CommandHandler<TOptions, TParams>): ICommand<any> {
+        const command = new Command(name, { handler });
+        unwrapArray(this.commands).push(command);
+
+        return command;
+    }
+
     public outputHelp(): void {
         console.log();
         console.log(`  Usage: ${this.name} [options] <command>`);
@@ -173,6 +189,10 @@ export interface ICommand<TResolvedCommands extends object> {
 
     handle(options: any, params: any): Promise<void>;
 
+    registerOption(name: string, flags: ReadonlyArray<string>, description: string): IOption;
+    registerParam(name: string): IParam;
+    registerCommand<TOptions extends object, TParams extends object>(name: string, handler?: CommandHandler<TOptions, TParams>): ICommand<any>;
+
     outputHelp(): void;
 }
 export class Command<TResolvedCommands extends object> implements ICommand<TResolvedCommands> {
@@ -198,12 +218,11 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
         });
     }
 
-    public constructor(name: string, props: ConstructorOptionalProps<Command<TResolvedCommands>, 'handler' | 'options' | 'params' | 'commands'>) {
+    public constructor(name: string, props: ConstructorOptionalProps<Command<TResolvedCommands>, 'handler' | 'options' | 'params' | 'commands'> = {}) {
         this.name = name;
 
         this.handler = props.handler || ((options, args, handler) => {
             this.outputHelp();
-            // handler();
         });
         this.options = props.options ? props.options.slice() : [];
         this.params = props.params ? props.params.slice() : [];
@@ -220,6 +239,25 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
             else if (this.app)
                 await this.app.handler(options, params);
         });
+    }
+
+    public registerOption(name: string, flags: ReadonlyArray<string>, description: string): IOption {
+        const option = new Option(name, flags, { description });
+        unwrapArray(this.options).push(option);
+
+        return option;
+    }
+    public registerParam(name: string): IParam {
+        const param = new Param(name);
+        unwrapArray(this.params).push(param);
+
+        return param;
+    }
+    public registerCommand<TOptions extends object, TParams extends object>(name: string, handler?: CommandHandler<TOptions, TParams>): ICommand<any> {
+        const command = new Command(name, { handler });
+        unwrapArray(this.commands).push(command);
+
+        return command;
     }
 
     public outputHelp(): void {
