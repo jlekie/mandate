@@ -7,16 +7,32 @@ export interface IDefaultOptions {
 }
 
 {{#each commands}}
-export interface I{{pascalcase @key}}Options {
-    {{#each options}}
-    {{@key}}: {{type}};
-    {{/each}}
-}
+{{> commandOptions}}
 {{/each}}
 
 export type Handlers = {
     default: Mandate.DefaultCommandHandler<IDefaultOptions, any>;
     {{#each commands}}
-    {{camelcase @key}}: Mandate.CommandHandler<I{{pascalcase @key}}Options, any>;
+    {{> commandHandler}}
     {{/each}}
 };
+{{#*inline "commandOptions"}}
+{{#if handler}}
+export interface I{{capitalize handler}}Options {
+    {{#each options}}
+    {{@key}}: {{type}};
+    {{/each}}
+}
+{{/if}}
+{{#each commands}}
+{{> commandOptions}}
+{{/each}}
+{{/inline}}
+{{#*inline "commandHandler"}}
+{{#if handler}}
+{{handler}}: Mandate.CommandHandler<I{{capitalize handler}}Options, any>;
+{{/if}}
+{{#each commands}}
+{{> commandHandler}}
+{{/each}}
+{{/inline}}
