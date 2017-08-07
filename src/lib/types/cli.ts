@@ -50,7 +50,7 @@ export interface IApp {
 
     handle(args: Array<string>): Promise<void>;
 
-    registerOption(name: string, flags: ReadonlyArray<string>, description: string): IOption;
+    registerOption(name: string, type: string, flags: ReadonlyArray<string>, description: string): IOption;
     registerCommand<TOptions extends object, TParams extends object>(name: string, handler?: CommandHandler<TOptions, TParams>): ICommand<any>;
 
     outputHelp(): void;
@@ -77,8 +77,15 @@ export class App implements IApp {
         this.name = name;
         this.version = version;
 
-        this.handler = options.handler || function () {};
-        this.options = options.options ? options.options.slice() : [];
+        this.handler = (async (options, args) => {
+            if (options.help)
+                this.outputHelp();
+            else if (options.handler)
+                await options.handler(options, args);
+            else
+                this.outputHelp();
+        });
+        this.options = options.options ? [ Option.helpOption, ...options.options ] : [ Option.helpOption ];
         this.commands = options.commands ? options.commands.slice() : [];
 
         for (const command of this.commands)
@@ -104,9 +111,13 @@ export class App implements IApp {
                     flag = arg.substr(0, valueDelimiterIdx);
                     value = arg.substr(valueDelimiterIdx + 1);
                 }
-                else {
+                else if (args.length > 0 && !args[0].startsWith('-')) {
                     flag = arg;
                     value = args.shift();
+                }
+                else {
+                    flag = arg;
+                    value = 'true';
                 }
 
                 rawOptions.push({ flag, value });
@@ -148,8 +159,8 @@ export class App implements IApp {
         }
     }
 
-    public registerOption(name: string, flags: ReadonlyArray<string>, description: string): IOption {
-        const option = new Option(name, flags, { description });
+    public registerOption(name: string, type: string, flags: ReadonlyArray<string>, description: string): IOption {
+        const option = new Option(name, type, flags, { description });
         unwrapArray(this.options).push(option);
 
         return option;
@@ -162,13 +173,16 @@ export class App implements IApp {
     }
 
     public outputHelp(): void {
+        const options: Array<IOption> = [ ...this.options ];
+        const maxLengthOption = _.max(options.map(option => option.flags.join(', ').length)) || 0;
+
         console.log();
         console.log(`  Usage: ${this.name} [options] <command>`);
         console.log();
         console.log('  Options:');
         console.log();
         for (const option of this.options)
-            console.log(`    ${option.flags.join(', ')}\t${option.description}`);
+            console.log(`    ${_.padEnd(option.flags.join(', '), maxLengthOption + 4)}${option.description}`);
         console.log();
         console.log('  Commands:');
         console.log();
@@ -189,7 +203,7 @@ export interface ICommand<TResolvedCommands extends object> {
 
     handle(options: any, params: any): Promise<void>;
 
-    registerOption(name: string, flags: ReadonlyArray<string>, description: string): IOption;
+    registerOption(name: string, type: string, flags: ReadonlyArray<string>, description: string): IOption;
     registerParam(name: string): IParam;
     registerCommand<TOptions extends object, TParams extends object>(name: string, handler?: CommandHandler<TOptions, TParams>): ICommand<any>;
 
@@ -221,8 +235,13 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
     public constructor(name: string, props: ConstructorOptionalProps<Command<TResolvedCommands>, 'handler' | 'options' | 'params' | 'commands'> = {}) {
         this.name = name;
 
-        this.handler = props.handler || ((options, args, handler) => {
-            this.outputHelp();
+        this.handler = (async (options, args, handler) => {
+            if (options.help)
+                this.outputHelp();
+            else if (props.handler)
+                await props.handler(options, args, handler);
+            else
+                this.outputHelp();
         });
         this.options = props.options ? props.options.slice() : [];
         this.params = props.params ? props.params.slice() : [];
@@ -241,8 +260,8 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
         });
     }
 
-    public registerOption(name: string, flags: ReadonlyArray<string>, description: string): IOption {
-        const option = new Option(name, flags, { description });
+    public registerOption(name: string, type: string, flags: ReadonlyArray<string>, description: string): IOption {
+        const option = new Option(name, type, flags, { description });
         unwrapArray(this.options).push(option);
 
         return option;
@@ -261,42 +280,49 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
     }
 
     public outputHelp(): void {
+        const options: Array<IOption> = [ ...this.options, ...(this.app ? this.app.options : []) ];
+        const maxLengthOption = _.max(options.map(option => option.flags.join(', ').length)) || 0;
+
         console.log();
         console.log(`  Usage: ${this.name} [options]`);
         console.log();
-        console.log('  Options:');
-        console.log();
-        for (const option of this.options)
-            console.log(`    ${option.flags.join(', ')}\t${option.description}`);
-        if (this.app) {
-            for (const option of this.app.options)
-                console.log(`    ${option.flags.join(', ')}\t${option.description}`);
+        if (options.length > 0) {
+            console.log('  Options:');
+            console.log();
+            for (const option of options)
+                console.log(`    ${_.padEnd(option.flags.join(', '), maxLengthOption + 4)}${option.description}`);
         }
         console.log();
-        console.log('  Commands:');
-        console.log();
-        for (const command of this.commands)
-            console.log(`    ${command.name}`);
+        if (this.commands.length > 0) {
+            console.log('  Commands:');
+            console.log();
+            for (const command of this.commands)
+                console.log(`    ${command.name}`);
+        }
     }
 }
 
 export interface IOption {
     readonly name: string;
+    readonly type: string;
     readonly flags: ReadonlyArray<string>;
     readonly description?: string;
 }
 export class Option implements IOption {
+    public static readonly helpOption = new Option('help', 'flag', [ '-h', '--help' ], { description: 'Display help' });
+
     public readonly name: string;
+    public readonly type: string;
     public readonly flags: ReadonlyArray<string>;
     public readonly description?: string;
 
     public static fromSpec(name: string, specOption: ISpecOption): Option {
-        return new this(name, specOption.flags, {
+        return new this(name, specOption.type, specOption.flags, {
             description: specOption.description
         });
     }
 
-    public constructor(name: string, flags: ReadonlyArray<string>, options: Options<Option, 'description'> = {}) {
+    public constructor(name: string, type: string, flags: ReadonlyArray<string>, options: Options<Option, 'description'> = {}) {
         this.name = name;
         this.flags = flags.slice();
 
