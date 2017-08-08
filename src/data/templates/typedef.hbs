@@ -20,7 +20,7 @@ export type Handlers = {
 {{#if handler}}
 export interface I{{capitalize handler}}Options {
     {{#each options}}
-    {{@key}}: {{type}};
+    {{@key}}: {{> optionDataType}};
     {{/each}}
 }
 {{/if}}
@@ -36,3 +36,4 @@ export interface I{{capitalize handler}}Options {
 {{> commandHandler}}
 {{/each}}
 {{/inline}}
+{{#*inline "optionDataType"}}{{#eq type "array"}}ReadonlyArray<string>{{else}}{{type}}{{/eq}}{{/inline}}

@@ -146,7 +146,15 @@ export class App implements IApp {
             if (!option)
                 throw new Error(`Unknown option ${rawOption.flag}`);
 
-            options[option.name] = rawOption.value;
+            switch (option.type) {
+                case 'array':
+                    options[option.name] = options[option.name] || [];
+                    options[option.name].push(rawOption.value);
+                    break;
+                default:
+                    options[option.name] = rawOption.value;
+                    break;
+            }
         }
 
         const params: any = {};
@@ -355,6 +363,7 @@ export class Option implements IOption {
 
     public constructor(name: string, type: string, flags: ReadonlyArray<string>, options: Options<Option, 'description'> = {}) {
         this.name = name;
+        this.type = type;
         this.flags = flags.slice();
 
         this.description = options.description;
