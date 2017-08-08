@@ -180,7 +180,7 @@ export class App implements IApp {
         const maxLengthOption = _.max(options.map(option => option.flags.join(', ').length)) || 0;
 
         console.log();
-        console.log(`  Usage: ${this.name} [options] <command>`);
+        console.log(`  Usage: ${this.name} [options]${this.commands.length > 0 ? ' <command>' : ''}`);
         console.log();
         if (options.length > 0) {
             console.log('  Options:');
@@ -308,7 +308,7 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
         }
 
         console.log();
-        console.log(`  Usage: ${this.app && `${this.app.name} `}${parentCommands.map(c => `${c.name} `)}${this.name} [options]`);
+        console.log(`  Usage: ${this.app && `${this.app.name} `}${parentCommands.map(c => `${c.name} `)}${this.name} [options]${this.commands.length > 0 ? ' <command>' : ''}`);
         console.log();
         if (options.length > 0) {
             console.log('  Options:');
