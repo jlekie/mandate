@@ -299,8 +299,16 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
         const options: Array<IOption> = [ ...this.options, ...(this.app ? this.app.options : []) ];
         const maxLengthOption = _.max(options.map(option => option.flags.join(', ').length)) || 0;
 
+        let parentCommands: Array<ICommand<any>> = [];
+
+        let parentCommand = this.parentCommand;
+        while (parentCommand) {
+            parentCommands.push(parentCommand);
+            parentCommand = parentCommand.parentCommand;
+        }
+
         console.log();
-        console.log(`  Usage: ${this.name} [options]`);
+        console.log(`  Usage: ${this.app && `${this.app.name} `}${parentCommands.map(c => `${c.name} `)}${this.name} [options]`);
         console.log();
         if (options.length > 0) {
             console.log('  Options:');
