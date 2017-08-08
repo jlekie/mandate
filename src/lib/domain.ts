@@ -13,8 +13,8 @@ export async function loadSpec(path: string): Promise<ISpec> {
     return Spec.parse(hash);
 }
 
-export function createApp<THandlers extends ICommandHandlers>(spec: ISpec, packageManifest: IPackageManifest, handlers: THandlers): IApp {
-    return App.fromSpec(spec, packageManifest, handlers);
+export function createApp<THandlers extends ICommandHandlers>(name: string, version: string, spec: ISpec, handlers: THandlers): IApp {
+    return App.fromSpec(name, version, spec, handlers);
 }
 
 export async function generateTypedef(spec: ISpec, destPath: string): Promise<void> {

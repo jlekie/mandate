@@ -54,6 +54,7 @@ export interface IApp {
     registerCommand<TOptions extends object, TParams extends object>(name: string, handler?: CommandHandler<TOptions, TParams>): ICommand<any>;
 
     outputHelp(): void;
+    outputVersion(): void;
 }
 export class App implements IApp {
     public readonly name: string;
@@ -65,8 +66,8 @@ export class App implements IApp {
     public static parse(packageManifest: IPackageManifest) {
         return new App(packageManifest.name, packageManifest.version);
     }
-    public static fromSpec(spec: ISpec, packageManifest: IPackageManifest, handlers: ICommandHandlers): App {
-        return new this(packageManifest.name, packageManifest.version, {
+    public static fromSpec(name: string, version: string, spec: ISpec, handlers: ICommandHandlers): App {
+        return new this(name, version, {
             handler: handlers.default,
             options: _.map(spec.options || {}, (value, key) => Option.fromSpec(key, value)),
             commands: _.map(spec.commands || {}, (value, key) => Command.fromSpec(key, value, handlers))
@@ -80,12 +81,14 @@ export class App implements IApp {
         this.handler = (async (options, args) => {
             if (options.help)
                 this.outputHelp();
+            else if (options.version)
+                this.outputVersion();
             else if (options.handler)
                 await options.handler(options, args);
             else
                 this.outputHelp();
         });
-        this.options = options.options ? [ Option.helpOption, ...options.options ] : [ Option.helpOption ];
+        this.options = options.options ? [ Option.helpOption, Option.versionOption, ...options.options ] : [ Option.helpOption, Option.versionOption ];
         this.commands = options.commands ? options.commands.slice() : [];
 
         for (const command of this.commands)
@@ -179,15 +182,25 @@ export class App implements IApp {
         console.log();
         console.log(`  Usage: ${this.name} [options] <command>`);
         console.log();
-        console.log('  Options:');
+        if (options.length > 0) {
+            console.log('  Options:');
+            console.log();
+            for (const option of options)
+                console.log(`    ${_.padEnd(option.flags.join(', '), maxLengthOption + 4)}${option.description}`);
+            console.log();
+        }
+        if (this.commands.length > 0) {
+            console.log('  Commands:');
+            console.log();
+            for (const command of this.commands)
+                console.log(`    ${command.name}`);
+            console.log();
+        }
+    }
+    public outputVersion(): void {
         console.log();
-        for (const option of this.options)
-            console.log(`    ${_.padEnd(option.flags.join(', '), maxLengthOption + 4)}${option.description}`);
+        console.log(`  v${this.version}`);
         console.log();
-        console.log('  Commands:');
-        console.log();
-        for (const command of this.commands)
-            console.log(`    ${command.name}`);
     }
 }
 
@@ -208,6 +221,7 @@ export interface ICommand<TResolvedCommands extends object> {
     registerCommand<TOptions extends object, TParams extends object>(name: string, handler?: CommandHandler<TOptions, TParams>): ICommand<any>;
 
     outputHelp(): void;
+    outputVersion(): void;
 }
 export class Command<TResolvedCommands extends object> implements ICommand<TResolvedCommands> {
     public readonly name: string;
@@ -238,6 +252,8 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
         this.handler = (async (options, args, handler) => {
             if (options.help)
                 this.outputHelp();
+            else if (options.version)
+                this.outputVersion();
             else if (props.handler)
                 await props.handler(options, args, handler);
             else
@@ -291,14 +307,20 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
             console.log();
             for (const option of options)
                 console.log(`    ${_.padEnd(option.flags.join(', '), maxLengthOption + 4)}${option.description}`);
+            console.log();
         }
-        console.log();
         if (this.commands.length > 0) {
             console.log('  Commands:');
             console.log();
             for (const command of this.commands)
                 console.log(`    ${command.name}`);
+            console.log();
         }
+    }
+    public outputVersion(): void {
+        console.log();
+        console.log(`  v${this.app ? this.app.version : '???'}`);
+        console.log();
     }
 }
 
@@ -310,6 +332,7 @@ export interface IOption {
 }
 export class Option implements IOption {
     public static readonly helpOption = new Option('help', 'flag', [ '-h', '--help' ], { description: 'Display help' });
+    public static readonly versionOption = new Option('version', 'flag', [ '-v', '--version' ], { description: 'Display version' });
 
     public readonly name: string;
     public readonly type: string;
