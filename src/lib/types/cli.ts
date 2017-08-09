@@ -192,6 +192,8 @@ export class App implements IApp {
         const command = new Command(name, { handler });
         unwrapArray(this.commands).push(command);
 
+        registerCommand(command, { app: this });
+
         return command;
     }
 
@@ -323,6 +325,8 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
     public registerCommand<TOptions extends object, TParams extends object>(name: string, handler?: CommandHandler<TOptions, TParams>): ICommand<any> {
         const command = new Command(name, { handler });
         unwrapArray(this.commands).push(command);
+
+        registerCommand(command, { app: this.app, command: this });
 
         return command;
     }
