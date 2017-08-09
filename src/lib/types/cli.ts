@@ -10,9 +10,14 @@ export type ConstructorProps<T, RK extends keyof T, OK extends keyof T> = Constr
 export type CommandHandler<TOptions extends object, TParams extends object> = (options: TOptions, params: TParams, parentHandler: () => Promise<void> | void) => Promise<void> | void;
 export type DefaultCommandHandler<TOptions extends object, TParams extends object> = (options: TOptions, params: TParams) => Promise<void> | void;
 
+export type HelpHandler = () => void;
+
 export interface ICommandHandlers {
     default: DefaultCommandHandler<any, any>;
     [key: string]: CommandHandler<any, any>;
+}
+export interface ICommandHelpHandlers {
+    [key: string]: HelpHandler;
 }
 
 function unwrapArray<T>(items: ReadonlyArray<T>): Array<T> {
@@ -48,6 +53,8 @@ export interface IApp {
     readonly options: ReadonlyArray<IOption>;
     readonly commands: ReadonlyArray<ICommand<any>>;
 
+    readonly helpHandler?: HelpHandler;
+
     handle(args: Array<string>): Promise<void>;
 
     registerOption(name: string, type: string, flags: ReadonlyArray<string>, description: string): IOption;
@@ -63,18 +70,21 @@ export class App implements IApp {
     public readonly options: ReadonlyArray<IOption>;
     public readonly commands: ReadonlyArray<ICommand<any>>;
 
+    public readonly helpHandler?: HelpHandler;
+
     public static parse(packageManifest: IPackageManifest) {
         return new App(packageManifest.name, packageManifest.version);
     }
-    public static fromSpec(name: string, version: string, spec: ISpec, handlers: ICommandHandlers): App {
+    public static fromSpec(name: string, version: string, spec: ISpec, handlers: ICommandHandlers, helpHandlers?: ICommandHelpHandlers): App {
         return new this(name, version, {
             handler: handlers.default,
             options: _.map(spec.options || {}, (value, key) => Option.fromSpec(key, value)),
-            commands: _.map(spec.commands || {}, (value, key) => Command.fromSpec(key, value, handlers))
+            commands: _.map(spec.commands || {}, (value, key) => Command.fromSpec(key, value, handlers, helpHandlers)),
+            helpHandler: helpHandlers && helpHandlers.default
         });
     }
 
-    public constructor(name: string, version: string, options: Options<App, 'handler' | 'options' | 'commands'> = {}) {
+    public constructor(name: string, version: string, options: Options<App, 'handler' | 'helpHandler' | 'options' | 'commands'> = {}) {
         this.name = name;
         this.version = version;
 
@@ -90,6 +100,8 @@ export class App implements IApp {
         });
         this.options = options.options ? [ Option.helpOption, Option.versionOption, ...options.options ] : [ Option.helpOption, Option.versionOption ];
         this.commands = options.commands ? options.commands.slice() : [];
+
+        this.helpHandler = options.helpHandler;
 
         for (const command of this.commands)
             registerCommand(command, { app: this });
@@ -204,6 +216,11 @@ export class App implements IApp {
                 console.log(`    ${command.name}`);
             console.log();
         }
+
+        if (this.helpHandler) {
+            this.helpHandler();
+            console.log();
+        }
     }
     public outputVersion(): void {
         console.log();
@@ -218,6 +235,8 @@ export interface ICommand<TResolvedCommands extends object> {
     readonly options: ReadonlyArray<IOption>;
     readonly params: ReadonlyArray<IParam>;
     readonly commands: ReadonlyArray<ICommand<any>>;
+
+    readonly helpHandler?: HelpHandler;
 
     readonly app: IApp | null;
     readonly parentCommand: ICommand<any> | null;
@@ -238,6 +257,8 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
     public readonly params: ReadonlyArray<IParam>;
     public readonly commands: ReadonlyArray<ICommand<any>>;
 
+    public readonly helpHandler?: HelpHandler;
+
     public get app(): IApp | null {
         return commandAppMap.get(this) || null;
     }
@@ -245,16 +266,17 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
         return commandCommandMap.get(this) || null;
     }
 
-    public static fromSpec(name: string, specCommand: ISpecCommand, handlers: ICommandHandlers): Command<any> {
+    public static fromSpec(name: string, specCommand: ISpecCommand, handlers: ICommandHandlers, helpHandlers?: ICommandHelpHandlers): Command<any> {
         return new this(name, {
             handler: handlers[specCommand.handler],
             options: _.map(specCommand.options || {}, (value, key) => Option.fromSpec(key, value)),
             params: _.map(specCommand.params || {}, (value, key) => Param.fromSpec(key, value)),
-            commands: _.map(specCommand.commands || {}, (value, key) => Command.fromSpec(key, value, handlers)),
+            commands: _.map(specCommand.commands || {}, (value, key) => Command.fromSpec(key, value, handlers, helpHandlers)),
+            helpHandler: helpHandlers && helpHandlers[specCommand.handler]
         });
     }
 
-    public constructor(name: string, props: ConstructorOptionalProps<Command<TResolvedCommands>, 'handler' | 'options' | 'params' | 'commands'> = {}) {
+    public constructor(name: string, props: ConstructorOptionalProps<Command<TResolvedCommands>, 'handler' | 'helpHandler' | 'options' | 'params' | 'commands'> = {}) {
         this.name = name;
 
         this.handler = (async (options, args, handler) => {
@@ -270,6 +292,8 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
         this.options = props.options ? props.options.slice() : [];
         this.params = props.params ? props.params.slice() : [];
         this.commands = props.commands ? props.commands.slice() : [];
+
+        this.helpHandler = props.helpHandler;
 
         for (const command of this.commands)
             registerCommand(command, { app: this.app, command: this });
@@ -331,6 +355,11 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
             console.log();
             for (const command of this.commands)
                 console.log(`    ${command.name}`);
+            console.log();
+        }
+
+        if (this.helpHandler) {
+            this.helpHandler();
             console.log();
         }
     }

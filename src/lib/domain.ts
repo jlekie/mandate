@@ -4,7 +4,7 @@ import * as Yaml from 'js-yaml';
 
 import * as Templates from '@/lib/templates';
 
-import { ISpec, IApp, IOption, Spec, App, Command, Option, IPackageManifest, CommandHandler, ICommandHandlers } from './types';
+import { ISpec, IApp, IOption, Spec, App, Command, Option, IPackageManifest, CommandHandler, ICommandHandlers, ICommandHelpHandlers } from './types';
 
 export async function loadSpec(path: string): Promise<ISpec> {
     const buffer = await FS.readFile(path, 'utf8');
@@ -13,8 +13,8 @@ export async function loadSpec(path: string): Promise<ISpec> {
     return Spec.parse(hash);
 }
 
-export function createApp<THandlers extends ICommandHandlers>(name: string, version: string, spec: ISpec, handlers: THandlers): IApp {
-    return App.fromSpec(name, version, spec, handlers);
+export function createApp<THandlers extends ICommandHandlers>(name: string, version: string, spec: ISpec, handlers: THandlers, helpHandlers?: ICommandHelpHandlers): IApp {
+    return App.fromSpec(name, version, spec, handlers, helpHandlers);
 }
 
 export async function generateTypedef(spec: ISpec, destPath: string): Promise<void> {
