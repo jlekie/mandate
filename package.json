@@ -5,6 +5,7 @@
     "license": "MIT",
     "repository": "jlekie/mandate",
     "main": "index.js",
+    "bin": "./bin/run.js",
     "engines": {
         "node": ">=6.x"
     },
