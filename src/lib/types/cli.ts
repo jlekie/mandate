@@ -345,7 +345,7 @@ export class Command<TResolvedCommands extends object> implements ICommand<TReso
         parentCommands.reverse();
 
         console.log();
-        console.log(`  Usage: ${this.app && `${this.app.name} `}${parentCommands.map(c => `${c.name} `).join('')}${this.name} [options]${this.commands.length > 0 ? ' <command>' : ''}`);
+        console.log(`  Usage: ${this.app && `${this.app.name} `}${parentCommands.map(c => `${c.name} `).join('')}${this.name} [options]${this.params.map(p => ` <${p.name}>`).join('')}${this.commands.length > 0 ? ' <command>' : ''}`);
         console.log();
         if (options.length > 0) {
             console.log('  Options:');

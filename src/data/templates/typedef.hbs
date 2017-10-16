@@ -23,6 +23,11 @@ export interface I{{capitalize handler}}Options {
     {{@key}}: {{> optionDataType}};
     {{/each}}
 }
+export interface I{{capitalize handler}}Params {
+    {{#each params}}
+    {{@key}}: {{type}};
+    {{/each}}
+}
 {{/if}}
 {{#each commands}}
 {{> commandOptions}}
@@ -30,7 +35,7 @@ export interface I{{capitalize handler}}Options {
 {{/inline}}
 {{#*inline "commandHandler"}}
 {{#if handler}}
-{{handler}}: Mandate.CommandHandler<I{{capitalize handler}}Options, any>;
+{{handler}}: Mandate.CommandHandler<I{{capitalize handler}}Options, I{{capitalize handler}}Params>;
 {{/if}}
 {{#each commands}}
 {{> commandHandler}}

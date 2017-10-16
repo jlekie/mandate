@@ -4,7 +4,7 @@ import * as Debug from 'debug';
 
 import * as Handlebars from '@/modules/handlebars';
 
-const debug = Debug('dap');
+const debug = Debug('mandate');
 
 export async function typedef(context: any) {
     return compileTemplate('typedef').then(template => template(context));
